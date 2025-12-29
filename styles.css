@@ -59,10 +59,21 @@ body{
   border:1px solid rgba(255,255,255,.18);
   box-shadow:0 10px 26px rgba(0,0,0,.35);
 }
-.brandText{
-  font-weight:650;
-  color:rgba(255,255,255,.9);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+.brandStack{min-width:0}
+.brandTitle{
+  font-weight:900;
+  letter-spacing:1.2px;
+  color:rgba(255,255,255,.94);
+  line-height:1.05;
+}
+.brandSub{
+  margin-top:3px;
+  font-size:12px;
+  color:rgba(255,255,255,.62);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width: min(62vw, 640px);
 }
 .topActions{display:flex; gap:10px; align-items:center}
 
@@ -70,8 +81,101 @@ body{
 .hero{display:grid; grid-template-columns: 1fr; gap:18px; align-items:start}
 @media (max-width: 940px){
   .hero{grid-template-columns:1fr; gap:14px}
-  .brandText{display:none}
+  .brandSub{display:none}
   .topActions{gap:8px}
+}
+
+.stage{
+  position:fixed;
+  left:50%;
+  top:54%;
+  translate:-50% -50%;
+  z-index:2;
+  pointer-events:none;
+}
+.polaroid{
+  width: min(360px, 78vw);
+  pointer-events:auto;
+  transform: rotate(-2deg);
+  filter: drop-shadow(0 22px 46px rgba(0,0,0,.45));
+}
+.polaroidFrame{
+  position:relative;
+  padding:14px 14px 46px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(255,255,255,.38);
+}
+.polaroidFrame::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:18px;
+  background:
+    radial-gradient(900px 240px at 20% 10%, rgba(110,231,255,.16), transparent 55%),
+    radial-gradient(900px 240px at 80% 10%, rgba(255,77,166,.14), transparent 55%);
+  pointer-events:none;
+  mix-blend-mode: multiply;
+  opacity:.35;
+}
+.polaroidImg{
+  display:block;
+  width:100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.02));
+  object-fit: cover;
+  border: 1px solid rgba(0,0,0,.08);
+  opacity:0;
+  transition: opacity .18s ease;
+}
+.polaroidImg.show{opacity:1}
+.polaroidImg.show ~ .polaroidPlaceholder{display:none}
+.polaroidPlaceholder{
+  position:absolute;
+  left:14px; right:14px; top:14px;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color: rgba(0,0,0,.52);
+  font-weight:850;
+  letter-spacing:.4px;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(0,0,0,.05) 0px,
+    rgba(0,0,0,.05) 12px,
+    rgba(0,0,0,.02) 12px,
+    rgba(0,0,0,.02) 24px
+  );
+  border: 1px dashed rgba(0,0,0,.16);
+}
+.polaroidBar{
+  margin-top:10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:0 6px;
+}
+.polaroidCaption{
+  font-weight:900;
+  color: rgba(255,255,255,.82);
+  text-shadow: 0 10px 28px rgba(0,0,0,.55);
+  letter-spacing:.6px;
+}
+.polaroidBtns{display:flex; gap:8px; align-items:center}
+.btnTiny{padding:8px 10px; font-size:12px}
+
+@media (max-width: 860px){
+  .stage{
+    top:auto;
+    bottom: 250px;
+    left: 50%;
+    translate: -50% 0;
+  }
+  .polaroid{transform: rotate(-1deg); width:min(320px, 86vw)}
 }
 
 .title{margin:10px 0 8px; line-height:1.02}
@@ -101,6 +205,38 @@ body{
   background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
   border:1px solid rgba(255,255,255,.12);
   box-shadow:var(--shadow);
+}
+.panelDock{
+  position: fixed;
+  top: 74px;
+  right: 18px;
+  width: min(380px, calc(100vw - 36px));
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+  z-index: 7;
+}
+.panelDock::-webkit-scrollbar{width:10px}
+.panelDock::-webkit-scrollbar-thumb{background: rgba(255,255,255,.12); border-radius:999px}
+.panelDock::-webkit-scrollbar-track{background: transparent}
+
+.panelDock .panelHeader{gap:8px}
+.panelDock .panelHint{display:none}
+.panelDock .cardMain{font-size:15px; min-height:56px}
+.panelDock .btn{padding:9px 12px; font-size:13px}
+.panelDock .wishInput{height:36px}
+.panelDock .fileInput{height:36px}
+.panelDock .customBox{padding:10px}
+.panelDock .customHint{display:none}
+
+@media (max-width: 860px){
+  .panelDock{
+    position: static;
+    width: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .panelDock .panelHint{display:block}
+  .panelDock .customHint{display:block}
 }
 .panelHeader{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
 .panelTitle{font-weight:750}
@@ -229,7 +365,7 @@ body{
   position:fixed;
   inset:0;
   pointer-events:none;
-  z-index:1;
+  z-index:4;
   mix-blend-mode: screen;
   opacity:.92;
 }
@@ -237,18 +373,58 @@ body{
 .scene{
   position:fixed;
   left:0; right:0; bottom:0;
-  height: 240px;
+  height: 210px;
   pointer-events:none;
-  z-index:2;
-  opacity:.98;
+  z-index:1;
+  opacity:.78;
+  transform: translateY(10px);
+  mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 64%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 64%, rgba(0,0,0,0) 100%);
 }
 .scene svg{width:100%; height:100%}
+
+.scene .bunnyFloat{
+  animation: bunnyFloat 6.8s ease-in-out infinite;
+}
+.scene .bunnyBreathe{
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bunnyBreathe 4.8s ease-in-out infinite;
+}
+.scene .armWave{
+  transform-box: fill-box;
+  transform-origin: 80px 98px;
+  animation: armWave 5.6s ease-in-out infinite;
+}
+.scene .blink{
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 6.2s infinite;
+}
+
+@keyframes bunnyFloat{
+  0%,100%{transform: translateY(0)}
+  50%{transform: translateY(-2px)}
+}
+@keyframes bunnyBreathe{
+  0%,100%{transform: scale(1)}
+  50%{transform: scale(1.012)}
+}
+@keyframes armWave{
+  0%,100%{transform: rotate(0deg)}
+  50%{transform: rotate(-5deg)}
+}
+@keyframes blink{
+  0%,92%,100%{transform: scaleY(1)}
+  94%{transform: scaleY(0.1)}
+  96%{transform: scaleY(1)}
+}
 
 .danmuLayer{
   position:fixed;
   inset:0;
   pointer-events:none;
-  z-index:2;
+  z-index:6;
 }
 .danmu{
   position:absolute;
@@ -299,4 +475,8 @@ body{
 
 @media (prefers-reduced-motion: reduce){
   .btn{transition:none}
+  .scene .bunnyFloat,
+  .scene .bunnyBreathe,
+  .scene .armWave,
+  .scene .blink{animation:none !important}
 }

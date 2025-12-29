@@ -65,7 +65,7 @@ function setBlessing(text) {
 
 function getShareText() {
   const line = $("#blessingText").textContent?.trim() || "2026 新年快乐！";
-  return `2026 新年快乐！\n陈贤祝大家新年快乐：${line}\n`;
+  return `2026 新年快乐！\n陈贤送上祝福：${line}\n`;
 }
 
 async function copyShareText() {
@@ -534,7 +534,8 @@ function spawnDanmu(text) {
   const node = document.createElement("div");
   node.className = "danmu";
   node.textContent = msg;
-  node.style.left = `${randInt(12, 88)}%`;
+  const maxLeft = innerWidth >= 920 ? 62 : 88;
+  node.style.left = `${randInt(12, maxLeft)}%`;
   node.style.bottom = `${randInt(78, 110)}px`;
   node.style.setProperty("--h", `${randInt(0, 359)}`);
 
@@ -600,7 +601,7 @@ function setupFx() {
           x: randInt(160, innerWidth - 160),
         });
       } else if (useText) {
-        const presets = ["2026", "新年快乐", "陈贤"];
+        const presets = ["2026", "新年快乐", "陈贤祝您新年快乐"];
         launchShell({
           style: "text",
           payload: presets[randInt(0, presets.length - 1)],
@@ -734,9 +735,11 @@ function setReduceMotion(enabled) {
 }
 
 function spawnHeartFirework() {
-  const x = randInt(160, innerWidth - 160);
-  const y = randInt(80, Math.floor(innerHeight * 0.40));
-  explodeAt(x, y, randInt(320, 359), "heart");
+  launchShell({
+    style: "heart",
+    hue: randInt(320, 359),
+    x: randInt(160, innerWidth - 160),
+  });
   showToast("送你一朵心形烟花");
 }
 
@@ -775,7 +778,11 @@ function wireUi() {
     const text = input.value.trim() || pickBlessing();
     input.value = "";
     spawnDanmu(text);
-    explodeAt(randInt(160, innerWidth - 160), randInt(80, Math.floor(innerHeight * 0.35)), randInt(320, 359), "heart");
+    launchShell({
+      style: "heart",
+      hue: randInt(320, 359),
+      x: randInt(160, innerWidth - 160),
+    });
   });
   $("#wishInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") $("#btnSendWish").click();
@@ -826,6 +833,114 @@ function wireUi() {
   $("#blessingCard").addEventListener("click", copyShareText);
 
   $("#btnReduceMotion").addEventListener("click", () => setReduceMotion(!state.reduceMotion));
+
+  // Polaroid photo (real image, not fireworks)
+  const photoInput = $("#photoInput");
+  const btnPhoto = $("#btnPhoto");
+  const btnPhotoClear = $("#btnPhotoClear");
+  const polaroid = $("#polaroid");
+  const photoPreview = $("#photoPreview");
+  const photoPlaceholder = $("#photoPlaceholder");
+  const defaultSrc = photoPreview?.getAttribute("src") || null;
+  let hasUserPhoto = false;
+  let photoUrl = null;
+
+  const applyPreviewVisible = () => {
+    if (!photoPreview || !photoPlaceholder) return;
+    photoPreview.classList.add("show");
+    photoPlaceholder.style.display = "none";
+  };
+
+  const applyPlaceholderVisible = () => {
+    if (!photoPreview || !photoPlaceholder) return;
+    photoPreview.classList.remove("show");
+    photoPlaceholder.style.display = "";
+  };
+
+  const setToDefault = () => {
+    hasUserPhoto = false;
+    if (!photoPreview) return;
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    photoUrl = null;
+    if (defaultSrc) {
+      photoPreview.src = defaultSrc;
+      applyPreviewVisible();
+      if (btnPhotoClear) btnPhotoClear.disabled = true;
+    } else {
+      photoPreview.removeAttribute("src");
+      applyPlaceholderVisible();
+      if (btnPhotoClear) btnPhotoClear.disabled = true;
+    }
+  };
+
+  const setPhoto = (file) => {
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    photoUrl = null;
+    if (!file) {
+      setToDefault();
+      return;
+    }
+    hasUserPhoto = true;
+    photoUrl = URL.createObjectURL(file);
+    if (!photoPreview) return;
+
+    let settled = false;
+    const finalize = () => {
+      if (settled) return;
+      settled = true;
+      applyPreviewVisible();
+      if (btnPhotoClear) btnPhotoClear.disabled = false;
+    };
+
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      applyPlaceholderVisible();
+      if (btnPhotoClear) btnPhotoClear.disabled = true;
+      showToast("图片预览失败：换一张试试");
+    };
+
+    photoPreview.addEventListener("load", finalize, { once: true });
+    photoPreview.addEventListener("error", fail, { once: true });
+    photoPreview.src = photoUrl;
+    photoPreview.decode?.().then(finalize).catch(() => {});
+  };
+
+  btnPhoto?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    photoInput?.click();
+  });
+  polaroid?.addEventListener("click", () => photoInput?.click());
+  photoInput?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type?.startsWith("image/")) {
+      showToast("请选择图片文件");
+      e.target.value = "";
+      return;
+    }
+    setPhoto(file);
+    e.target.value = "";
+  });
+  btnPhotoClear?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (photoInput) photoInput.value = "";
+    setToDefault();
+  });
+  polaroid?.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    const wasUserPhoto = hasUserPhoto;
+    if (photoInput) photoInput.value = "";
+    setToDefault();
+    showToast(wasUserPhoto ? "已清除照片" : "已恢复默认照片");
+  });
+
+  photoPreview?.addEventListener("error", () => {
+    applyPlaceholderVisible();
+  });
+
+  // Ensure default image shows when user hasn't uploaded.
+  setToDefault();
 
   document.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
