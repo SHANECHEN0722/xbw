@@ -712,7 +712,7 @@ function setupFx() {
           x: randInt(160, innerWidth - 160),
         });
       } else if (useText) {
-        const presets = ["2026", "新年快乐", "陈贤祝您新年快乐"];
+        const presets = ["2026", "新年快乐", "肖博雯祝您新年快乐"];
         launchShell({
           style: "text",
           payload: presets[randInt(0, presets.length - 1)],

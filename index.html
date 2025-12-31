@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <title>2026 · 陈贤祝大家新年快乐</title>
+    <title>2026 · 肖博雯祝大家新年快乐</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -49,7 +49,7 @@
         <div class="greeting-box">
           <p class="en-sub">HAPPY NEW YEAR</p>
           <p class="cn-wish">
-            陈贤祝你在新的一年<br />
+            肖博雯祝您在新的一年<br />
             所求皆如愿，所行化坦途<br />
             岁岁常欢愉，年年皆胜意
           </p>
@@ -67,7 +67,7 @@
                 <div class="cardMain" id="blessingText"></div>
                 <div class="cardMeta">
                   <span class="metaLabel">From</span>
-                  <span class="metaValue">陈贤 · 2026</span>
+                  <span class="metaValue">肖博雯 · 2026</span>
                 </div>
               </div>
             </div>
@@ -104,7 +104,7 @@
                   type="text"
                   inputmode="text"
                   maxlength="18"
-                  placeholder="输入短文字：2026 / 新年快乐 / 陈贤祝您新年快乐…"
+                  placeholder="输入短文字：2026 / 新年快乐 / 肖博雯祝您新年快乐…"
                   aria-label="自定义文字"
                 />
                 <button id="btnTextFirework" class="btn btnSecondary" type="button">文字烟花</button>
@@ -131,11 +131,15 @@
     </div>
 
     <svg class="svgDefs" width="0" height="0" aria-hidden="true" focusable="false">
-      <filter id="paint" x="-20%" y="-20%" width="140%" height="140%">
+      <filter id="paint" x="-80%" y="-80%" width="260%" height="260%">
         <feTurbulence type="turbulence" baseFrequency="0.012 0.45" numOctaves="3" seed="7" result="noise1" />
         <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="11" result="noise2" />
         <feComposite in="noise1" in2="noise2" operator="arithmetic" k1="0" k2="0.85" k3="0.25" k4="0" result="noise" />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="22" xChannelSelector="R" yChannelSelector="G" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="22" xChannelSelector="R" yChannelSelector="G" result="disp" />
+        <feMerge>
+          <feMergeNode in="SourceGraphic" />
+          <feMergeNode in="disp" />
+        </feMerge>
       </filter>
     </svg>
 
