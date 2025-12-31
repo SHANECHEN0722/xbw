@@ -28,6 +28,8 @@ const state = {
     shells: [],
     sparks: [],
     flashes: [],
+    smoke: [],
+    stars: [],
     enabled: true,
     raf: 0,
     lastT: 0,
@@ -46,6 +48,12 @@ const state = {
   },
 };
 
+function pickFireworkHue() {
+  const palette = [18, 28, 40, 350, 330];
+  const base = palette[randInt(0, palette.length - 1)];
+  return (base + randInt(-10, 10) + 360) % 360;
+}
+
 function pickBlessing() {
   return blessings[randInt(0, blessings.length - 1)];
 }
@@ -63,27 +71,44 @@ function setBlessing(text) {
   node.textContent = text;
 }
 
-function getShareText() {
-  const line = $("#blessingText").textContent?.trim() || "2026 新年快乐！";
-  return `2026 新年快乐！\n陈贤送上祝福：${line}\n`;
-}
-
-async function copyShareText() {
-  const text = getShareText();
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast("已复制祝福到剪贴板");
-  } catch {
-    showToast("复制失败：浏览器可能不允许剪贴板");
-  }
-}
-
 function hsla(h, s, l, a) {
   return `hsla(${Math.round(h)}, ${Math.round(s)}%, ${Math.round(l)}%, ${a})`;
 }
 
 function pushFlash(x, y, hue) {
   state.fx.flashes.push({ x, y, hue, age: 0, life: 10 });
+}
+
+function pushSmoke(x, y, hue) {
+  const count = randInt(6, 10);
+  for (let i = 0; i < count; i++) {
+    state.fx.smoke.push({
+      x: x + rand(-14, 14),
+      y: y + rand(-10, 10),
+      vx: rand(-0.25, 0.25),
+      vy: rand(-0.55, -0.10),
+      r: rand(26, 54),
+      hue: (hue + randInt(-18, 18) + 360) % 360,
+      a: rand(0.08, 0.14),
+      life: randInt(120, 200),
+      age: 0,
+    });
+  }
+}
+
+function ensureStars() {
+  if (state.fx.stars.length) return;
+  const count = Math.round((innerWidth * innerHeight) / 14000);
+  for (let i = 0; i < count; i++) {
+    state.fx.stars.push({
+      x: Math.random() * innerWidth,
+      y: Math.random() * innerHeight * 0.86,
+      r: Math.random() < 0.18 ? rand(1.1, 1.9) : rand(0.6, 1.2),
+      a: rand(0.15, 0.55),
+      tw: rand(0.0015, 0.004),
+      ph: Math.random() * TAU,
+    });
+  }
 }
 
 function drawFlash(x, y, hue, alpha) {
@@ -146,10 +171,57 @@ function drawSpark(p, lifeLeft) {
   ctx.fill();
 }
 
+function drawSmoke(k) {
+  const { ctx } = state.fx;
+  if (!state.fx.smoke.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  const next = [];
+  for (const p of state.fx.smoke) {
+    p.age += k;
+    const lifeLeft = 1 - p.age / p.life;
+    if (lifeLeft <= 0) continue;
+    p.x += p.vx * k;
+    p.y += p.vy * k;
+    p.vx *= 0.99;
+    p.vy *= 0.995;
+    const r = p.r * (1 + (1 - lifeLeft) * 1.1);
+    const a = p.a * lifeLeft * 0.9;
+
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    g.addColorStop(0, hsla(p.hue, 30, 62, a));
+    g.addColorStop(0.55, hsla(p.hue, 25, 38, a * 0.55));
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, TAU);
+    ctx.fill();
+    next.push(p);
+  }
+  state.fx.smoke = next;
+  ctx.restore();
+}
+
+function drawStars(t) {
+  const { ctx } = state.fx;
+  if (!state.fx.stars.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  for (const s of state.fx.stars) {
+    const tw = 0.65 + 0.35 * Math.sin(t * s.tw + s.ph);
+    ctx.globalAlpha = s.a * tw;
+    ctx.fillStyle = "rgba(255,255,255,.95)";
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function launchShell(opts = {}) {
   if (state.reduceMotion) return;
   const x = typeof opts.x === "number" ? opts.x : randInt(120, innerWidth - 120);
-  const hue = typeof opts.hue === "number" ? opts.hue : randInt(0, 359);
+  const hue = typeof opts.hue === "number" ? opts.hue : pickFireworkHue();
   const style = opts.style || randomStyle();
   const payload = opts.payload ?? null;
 
@@ -173,8 +245,9 @@ function launchShell(opts = {}) {
 
 function randomStyle() {
   const r = Math.random();
-  if (r < 0.16) return "willow";
-  if (r < 0.30) return "ring";
+  if (r < 0.18) return "willow";
+  if (r < 0.33) return "ring";
+  if (r < 0.46) return "palm";
   return "burst";
 }
 
@@ -202,6 +275,7 @@ function pushSparkCommon(x, y, vx, vy, hue, styleHint = "burst") {
 function explodeAt(x, y, hue = randInt(0, 359), style = "burst", payload = null) {
   if (state.reduceMotion) return;
   pushFlash(x, y, hue);
+  pushSmoke(x, y, hue);
 
   if (style === "heart") {
     explodeHeart(x, y, hue);
@@ -209,6 +283,10 @@ function explodeAt(x, y, hue = randInt(0, 359), style = "burst", payload = null)
   }
   if (style === "ring") {
     explodeRing(x, y, hue);
+    return;
+  }
+  if (style === "palm") {
+    explodePalm(x, y, hue);
     return;
   }
   if (style === "text") {
@@ -235,6 +313,36 @@ function explodeAt(x, y, hue = randInt(0, 359), style = "burst", payload = null)
     pushSparkCommon(x, y, vx, vy, hue + randInt(-12, 12), style);
   }
 
+  addGlitter(x, y, hue);
+}
+
+function explodePalm(x, y, hue) {
+  const fronds = randInt(14, 20);
+  const baseSpeed = rand(5.6, 7.6);
+  for (let i = 0; i < fronds; i++) {
+    const a = (i / fronds) * TAU + rand(-0.08, 0.08);
+    const sp = baseSpeed * (0.88 + Math.random() * 0.22);
+    const vx = Math.cos(a) * sp;
+    const vy = Math.sin(a) * sp;
+    state.fx.sparks.push({
+      x,
+      y,
+      px: x,
+      py: y,
+      vx,
+      vy,
+      g: 0.085 + Math.random() * 0.02,
+      drag: 0.990 - Math.random() * 0.006,
+      life: randInt(140, 200),
+      age: 0,
+      size: 1.7 + Math.random() * 1.2,
+      hue: (hue + randInt(-6, 6) + 360) % 360,
+      l: 62 + Math.random() * 18,
+      twinkle: Math.random() < 0.08,
+      phase: Math.random() * TAU,
+      glow: true,
+    });
+  }
   addGlitter(x, y, hue);
 }
 
@@ -570,6 +678,7 @@ function setupFx() {
 
   window.addEventListener("resize", resize, { passive: true });
   resize();
+  ensureStars();
 
   const loop = (t) => {
     const dt = state.fx.lastT ? Math.min(34, Math.max(10, t - state.fx.lastT)) : 16.7;
@@ -585,6 +694,8 @@ function setupFx() {
     ctx.globalCompositeOperation = "destination-out";
     ctx.fillStyle = `rgba(0,0,0,${0.20 * k})`;
     ctx.fillRect(0, 0, innerWidth, innerHeight);
+    drawStars(t);
+    drawSmoke(k);
     ctx.globalCompositeOperation = "lighter";
     ctx.lineCap = "round";
 
@@ -597,7 +708,7 @@ function setupFx() {
         launchShell({
           style: "customShape",
           payload: state.shape.custom,
-          hue: randInt(0, 359),
+          hue: pickFireworkHue(),
           x: randInt(160, innerWidth - 160),
         });
       } else if (useText) {
@@ -605,7 +716,7 @@ function setupFx() {
         launchShell({
           style: "text",
           payload: presets[randInt(0, presets.length - 1)],
-          hue: randInt(0, 359),
+          hue: pickFireworkHue(),
           x: randInt(160, innerWidth - 160),
         });
       } else {
@@ -729,9 +840,12 @@ function setupFx() {
 function setReduceMotion(enabled) {
   state.reduceMotion = enabled;
   state.fx.enabled = !enabled;
-  $("#btnReduceMotion").setAttribute("aria-pressed", enabled ? "true" : "false");
-  $("#btnReduceMotion").textContent = enabled ? "恢复动画" : "减少动画";
-  showToast(enabled ? "已减少动画" : "已恢复动画");
+  const btn = $("#btnReduceMotion");
+  if (btn) {
+    btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+    btn.textContent = enabled ? "恢复动画" : "减少动画";
+    showToast(enabled ? "已减少动画" : "已恢复动画");
+  }
 }
 
 function spawnHeartFirework() {
@@ -748,7 +862,7 @@ function spawnTextFirework(text) {
   launchShell({
     style: "text",
     payload: t,
-    hue: randInt(0, 359),
+    hue: pickFireworkHue(),
     x: randInt(160, innerWidth - 160),
   });
   showToast(`文字烟花：${t}`);
@@ -762,13 +876,25 @@ function spawnCustomShapeFirework() {
   launchShell({
     style: "customShape",
     payload: state.shape.custom,
-    hue: randInt(0, 359),
+    hue: pickFireworkHue(),
     x: randInt(160, innerWidth - 160),
   });
   showToast("自定义烟花已发射");
 }
 
 function wireUi() {
+  const dock = document.querySelector(".panelDock");
+  const btnUi = $("#btnUi");
+  const setDockVisible = (visible) => {
+    if (!dock || !btnUi) return;
+    dock.classList.toggle("isHidden", !visible);
+    btnUi.setAttribute("aria-expanded", visible ? "true" : "false");
+  };
+  btnUi?.addEventListener("click", () => {
+    const hidden = dock?.classList.contains("isHidden");
+    setDockVisible(Boolean(hidden));
+  });
+
   $("#btnDraw").addEventListener("click", () => setBlessing(pickBlessing()));
   $("#btnFireworks").addEventListener("click", showFireworksShow);
   $("#btnHeart").addEventListener("click", spawnHeartFirework);
@@ -828,11 +954,6 @@ function wireUi() {
   });
 
   $("#btnImageFirework").addEventListener("click", spawnCustomShapeFirework);
-
-  $("#btnShare").addEventListener("click", copyShareText);
-  $("#blessingCard").addEventListener("click", copyShareText);
-
-  $("#btnReduceMotion").addEventListener("click", () => setReduceMotion(!state.reduceMotion));
 
   // Polaroid photo (real image, not fireworks)
   const photoInput = $("#photoInput");
